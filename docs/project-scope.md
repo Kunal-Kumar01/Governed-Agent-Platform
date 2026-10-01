@@ -1,6 +1,6 @@
 # Governed Agent Platform — Project Scope
 
-*Sep 25, 2026 · @Kunal Kumar — stack decisions updated Oct 1, 2026*
+*Sep 25, 2026 · @Kunal Kumar — stack and evaluation design decisions updated Oct 1, 2026*
 
 ## The problem
 
@@ -149,7 +149,8 @@ This screen is the entire pitch. Everything else in the platform exists to feed 
 - The response, exactly as returned.
 - Token usage and cost for that specific exchange, input and output counted separately.
 - Latency from question to response.
-- A flag control, with a required reason when used: incorrect, incomplete, off-policy, or other.
+- The faithfulness score, computed asynchronously after the response was sent, once available.
+- A flag control, with a required reason when used: incorrect, incomplete, off-policy, or other — set manually by an admin, or automatically when the faithfulness score falls below threshold.
 
 ### Why each element earns its place
 
@@ -171,7 +172,11 @@ Rules that shape what an agent is allowed to say, applied automatically before e
 
 ### Rule types for v1
 
-**Confidence threshold.** After generation, a lightweight confidence estimate is computed — a straightforward approach is a second small model call asking "was the retrieved context sufficient to answer this confidently, yes or no, and why," logged alongside the response. Below the admin's configured threshold, the response is replaced with a fallback: "I'm not certain — please contact support." The original response is still logged in the trace, marked as suppressed, so the admin can see what the agent would have said and judge whether the threshold is calibrated correctly.
+**Similarity threshold.** Computed from the retrieved chunks before generation starts — a cheap, deterministic check for whether retrieval found anything worth answering from at all. Below the admin's configured threshold, generation never runs: a fixed fallback is returned ("I'm not certain — please contact support") and no tokens are spent. Above it, generation proceeds and streams to the user immediately. This is the real-time gate, and it is structurally blind to one failure mode: it never looks at what the model actually writes, only at what was retrieved.
+
+**Faithfulness check.** A second, independent check answering a different question: once the answer exists, does it actually say what the retrieved chunks say? This is a model call, run *after* the response has already streamed to the user, not synchronously — doubling generation cost and latency on every query would undermine the responsiveness the similarity gate exists to protect. The check compares the generated response's claims against the retrieved chunks and produces a faithfulness score, logged as a field on that exchange's trace alongside the prompt, chunks, tokens and cost already recorded there. There is no live correction in v1 — tokens already streamed can't be retracted — but if the score falls below a configured threshold, the conversation is automatically flagged, using the same flag mechanism and reason field the admin already reviews manually, with an automated trigger added alongside the manual ones.
+
+**Why both, and why neither replaces the other.** The similarity threshold can gate in real time but can't see generation drift, embellishment, or contradiction, because it never evaluates the written answer. The faithfulness check can see exactly that, but only after the fact, so it can never gate anything live. Each catches a failure the other is structurally blind to — treat them as two stages of one evaluation workflow, not as redundant layers.
 
 **Keyword blocklist.** A list of terms that, if present in the question, short-circuit generation entirely and return a fixed refusal. For an HR bot: salary negotiation tactics, legal advice, disciplinary specifics. Checked before the retrieval step runs at all, so no tokens are spent on a question that will be refused regardless.
 
@@ -183,15 +188,19 @@ Rules that shape what an agent is allowed to say, applied automatically before e
 flowchart LR
   A[Question in] --> B{Blocklist match?}
   B -->|Yes| C[Fixed refusal, no generation]
-  B -->|No| D[Retrieve + generate]
-  D --> E{Confidence above threshold?}
-  E -->|No| F[Fallback response; original logged as suppressed]
-  E -->|Yes| G[Response returned]
+  B -->|No| D[Retrieve chunks]
+  D --> E{Similarity above threshold?}
+  E -->|No| F[Fallback response, no generation]
+  E -->|Yes| G[Generate + stream response]
+  G --> H[Faithfulness check, async]
+  H --> I{Faithfulness above threshold?}
+  I -->|No| J[Auto-flag conversation]
+  I -->|Yes| K[Logged, no flag]
 ```
 
 ### The admin's editing surface
 
-A simple form per agent: the confidence threshold as a slider or number, the blocklist as a plain list of terms, the length cap as a number. No rule-builder UI, no boolean logic between rules for v1 — that is real complexity properly deferred until a second version justifies it.
+A simple form per agent: the similarity threshold and the faithfulness threshold as two separate sliders or numbers, the blocklist as a plain list of terms, the length cap as a number. No rule-builder UI, no boolean logic between rules for v1 — that is real complexity properly deferred until a second version justifies it.
 
 ### Why this is the governance claim, not just a feature list
 
@@ -310,7 +319,7 @@ Get one document uploaded, chunked, embedded and queryable before building any U
 - An agent created from scratch answers correctly against its uploaded documents within minutes of setup
 - Every response has a complete trace with no missing fields
 - A deliberately out-of-scope or blocklisted question is refused before generation runs
-- A deliberately underspecified question triggers the confidence fallback rather than a confident wrong answer
+- A deliberately underspecified question triggers the similarity-threshold fallback rather than a confident wrong answer, and a deliberately contradicted-by-source answer gets caught by the faithfulness check and auto-flagged
 - Cost per query is visible and matches the API bill within a small margin
 
 ### As a portfolio piece
@@ -327,7 +336,8 @@ Questions to be able to answer without preparation:
 - Walk me through what happens between a user asking a question and the answer appearing.
 - How do you know the org-scoping actually prevents cross-tenant leakage? What would you test?
 - What happens when retrieval finds nothing useful?
-- How is the confidence threshold calibrated, and how would you know if it is set wrong?
+- How are the similarity and faithfulness thresholds each calibrated, and how would you know if one were set wrong?
+- Why does the faithfulness check run asynchronously instead of blocking the response, and what does that cost the user in the one case where it finds a problem?
 - What is the most expensive part of a single query, and how would you reduce it?
 - How did you decide which agents should be Public versus Restricted, and how does the allowlist actually enforce that boundary?
 - If this had a hundred organisations tomorrow, what breaks first?
@@ -341,7 +351,7 @@ A crisp answer to the hundred-organisations question in particular — index sca
 
 - PDF only, or plain text too for v1? PDF parsing has more edge cases, such as multi-column layouts and scanned images with no text layer. Plain text first de-risks the pipeline before PDF parsing is added.
 - Fixed-size chunking, or structure-aware chunking from the start? Structure-aware is better but adds real complexity in Phase 1. A reasonable path: ship fixed-size chunking first, measure retrieval quality against the real test document, upgrade only if it is visibly wrong.
-- Does the confidence check run as a second model call, or is it derived from retrieval similarity scores alone? A second call is more accurate and costs more; a similarity-score heuristic is free but cruder. Worth trying the cheap version first and only adding the second call if it visibly under- or over-triggers.
+- ~~Does the confidence check run as a second model call, or is it derived from retrieval similarity scores alone?~~ **Resolved** — not either/or: a similarity-score gate runs synchronously before generation (free, real-time), and a faithfulness check (a second model call comparing the response against its retrieved chunks) runs asynchronously after generation to auto-flag drift, not to gate. See *Policy rules*.
 - Is there a document count or size limit per agent for v1? Needed to keep the demo predictable and the embedding cost bounded.
 
 ### The one thing most likely to sink this
