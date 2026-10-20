@@ -27,7 +27,9 @@ export const chunks = pgTable(
       .references(() => agents.id, { onDelete: "cascade" }),
     chunkIndex: integer("chunk_index").notNull(),
     content: text("content").notNull(),
-    embedding: vector("embedding", { dimensions: EMBEDDING_DIMENSIONS }).notNull(),
+    embedding: vector("embedding", {
+      dimensions: EMBEDDING_DIMENSIONS,
+    }).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
