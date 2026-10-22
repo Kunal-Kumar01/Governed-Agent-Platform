@@ -183,3 +183,19 @@ _Revised same day — see note at the end of each subsection below. The pipeline
 **Schema impact:** `chunks.ts`'s `EMBEDDING_DIMENSIONS` constant moves back to `512` — this time as an explicitly configured `voyage-4-lite` output dimension, not `voyage-3-lite`'s fixed one.
 
 **`project-scope.md` impact:** none, same reason as the Oct 19 entry — no dimension is named there.
+
+---
+
+## 2026-10-22 — End-user access model and database roles for row-level security
+
+### End-user access
+
+**Decided:** End users never belong to an organisation — `users.organisation_id` stays nullable on purpose (admins have one, end users don't). End users reach an agent only through its shareable link, as `project-scope.md` already describes: a Public agent needs nothing more (no login, no user row); a Restricted agent also requires login plus that agent's email allowlist. v1 stays at one admin per organisation, created at signup.
+**Why:** One person can be staff at one company and a customer of several others' support bots at the same time. Org membership can't model that; a per-agent allowlist keyed on email can.
+**Alternatives considered:** Request-to-join with admin approval (declined — needs a list of organisations visible to strangers, approval has to write across the row-level-security boundary, and users would sit without an organisation for long periods). Org invites for end users (declined — duplicates the allowlist). Org invites for additional admins are team management, which stays deferred per `project-scope.md`.
+
+### Database roles
+
+**Decided:** Two database roles. `app_user` — no ownership, no RLS bypass — runs every normal query, always through a helper that sets `app.current_org_id` / `app.current_user_id` for the transaction. The owner role runs migrations and a small set of trusted lookups (login, signup, resolving a chat link to its agent) kept in one server-only file.
+**Why:** Some lookups must happen before the organisation is known — logging in, signing up, opening a chat link — and RLS returns nothing for those by design. Confining the bypass to one small, lint-enforced file keeps "what code can cross tenant boundaries?" answerable in one sentence.
+**Still open:** Whether `FORCE ROW LEVEL SECURITY` is applied depends on whether Neon's owner role has the bypass permission — recorded once checked.
