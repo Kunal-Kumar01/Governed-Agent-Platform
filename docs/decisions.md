@@ -199,3 +199,5 @@ _Revised same day — see note at the end of each subsection below. The pipeline
 **Decided:** Two database roles. `app_user` — no ownership, no RLS bypass — runs every normal query, always through a helper that sets `app.current_org_id` / `app.current_user_id` for the transaction. The owner role runs migrations and a small set of trusted lookups (login, signup, resolving a chat link to its agent) kept in one server-only file.
 **Why:** Some lookups must happen before the organisation is known — logging in, signing up, opening a chat link — and RLS returns nothing for those by design. Confining the bypass to one small, lint-enforced file keeps "what code can cross tenant boundaries?" answerable in one sentence.
 **Still open:** Whether `FORCE ROW LEVEL SECURITY` is applied depends on whether Neon's owner role has the bypass permission — recorded once checked.
+
+**Owner role check (2026-10-22):** `neondb_owner` has `rolbypassrls = true` — `FORCE ROW LEVEL SECURITY` is safe to apply (Issue 6). `app_user` created via SQL with `rolbypassrls = false`; it must be created by hand (password kept out of git) before migration 0003 can run on a fresh database.
