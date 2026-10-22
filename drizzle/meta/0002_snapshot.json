@@ -44,9 +44,7 @@
           "name": "org_isolation",
           "as": "PERMISSIVE",
           "for": "ALL",
-          "to": [
-            "public"
-          ],
+          "to": ["public"],
           "using": "\"organisations\".\"id\" = NULLIF(current_setting('app.current_org_id', true), '')::integer",
           "withCheck": "\"organisations\".\"id\" = NULLIF(current_setting('app.current_org_id', true), '')::integer"
         }
@@ -109,12 +107,8 @@
           "name": "users_organisation_id_organisations_id_fk",
           "tableFrom": "users",
           "tableTo": "organisations",
-          "columnsFrom": [
-            "organisation_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organisation_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -124,9 +118,7 @@
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {
@@ -134,9 +126,7 @@
           "name": "org_isolation",
           "as": "PERMISSIVE",
           "for": "ALL",
-          "to": [
-            "public"
-          ],
+          "to": ["public"],
           "using": "\"users\".\"organisation_id\" = NULLIF(current_setting('app.current_org_id', true), '')::integer",
           "withCheck": "\"users\".\"organisation_id\" = NULLIF(current_setting('app.current_org_id', true), '')::integer"
         },
@@ -144,9 +134,7 @@
           "name": "self_read",
           "as": "PERMISSIVE",
           "for": "SELECT",
-          "to": [
-            "public"
-          ],
+          "to": ["public"],
           "using": "\"users\".\"id\" = NULLIF(current_setting('app.current_user_id', true), '')::integer"
         }
       },
@@ -223,12 +211,8 @@
           "name": "agents_organisation_id_organisations_id_fk",
           "tableFrom": "agents",
           "tableTo": "organisations",
-          "columnsFrom": [
-            "organisation_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organisation_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -238,9 +222,7 @@
         "agents_public_id_unique": {
           "name": "agents_public_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "public_id"
-          ]
+          "columns": ["public_id"]
         }
       },
       "policies": {
@@ -248,9 +230,7 @@
           "name": "org_isolation",
           "as": "PERMISSIVE",
           "for": "ALL",
-          "to": [
-            "public"
-          ],
+          "to": ["public"],
           "using": "\"agents\".\"organisation_id\" = NULLIF(current_setting('app.current_org_id', true), '')::integer",
           "withCheck": "\"agents\".\"organisation_id\" = NULLIF(current_setting('app.current_org_id', true), '')::integer"
         }
@@ -329,12 +309,8 @@
           "name": "documents_agent_id_agents_id_fk",
           "tableFrom": "documents",
           "tableTo": "agents",
-          "columnsFrom": [
-            "agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -346,9 +322,7 @@
           "name": "org_isolation",
           "as": "PERMISSIVE",
           "for": "ALL",
-          "to": [
-            "public"
-          ],
+          "to": ["public"],
           "using": "EXISTS (\n    SELECT 1 FROM agents\n    WHERE agents.id = documents.agent_id\n      AND agents.organisation_id = NULLIF(current_setting('app.current_org_id', true), '')::integer\n  )",
           "withCheck": "EXISTS (\n    SELECT 1 FROM agents\n    WHERE agents.id = documents.agent_id\n      AND agents.organisation_id = NULLIF(current_setting('app.current_org_id', true), '')::integer\n  )"
         }
@@ -462,12 +436,8 @@
           "name": "chunks_document_id_documents_id_fk",
           "tableFrom": "chunks",
           "tableTo": "documents",
-          "columnsFrom": [
-            "document_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["document_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -475,12 +445,8 @@
           "name": "chunks_agent_id_agents_id_fk",
           "tableFrom": "chunks",
           "tableTo": "agents",
-          "columnsFrom": [
-            "agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -492,9 +458,7 @@
           "name": "org_isolation",
           "as": "PERMISSIVE",
           "for": "ALL",
-          "to": [
-            "public"
-          ],
+          "to": ["public"],
           "using": "EXISTS (\n    SELECT 1 FROM agents\n    WHERE agents.id = chunks.agent_id\n      AND agents.organisation_id = NULLIF(current_setting('app.current_org_id', true), '')::integer\n  )",
           "withCheck": "EXISTS (\n    SELECT 1 FROM agents\n    WHERE agents.id = chunks.agent_id\n      AND agents.organisation_id = NULLIF(current_setting('app.current_org_id', true), '')::integer\n  )"
         }
@@ -507,18 +471,12 @@
     "public.role": {
       "name": "role",
       "schema": "public",
-      "values": [
-        "admin",
-        "end_user"
-      ]
+      "values": ["admin", "end_user"]
     },
     "public.agent_access": {
       "name": "agent_access",
       "schema": "public",
-      "values": [
-        "public",
-        "restricted"
-      ]
+      "values": ["public", "restricted"]
     },
     "public.agent_category": {
       "name": "agent_category",
@@ -534,18 +492,12 @@
     "public.document_file_type": {
       "name": "document_file_type",
       "schema": "public",
-      "values": [
-        "pdf"
-      ]
+      "values": ["pdf"]
     },
     "public.document_status": {
       "name": "document_status",
       "schema": "public",
-      "values": [
-        "processing",
-        "ready",
-        "failed"
-      ]
+      "values": ["processing", "ready", "failed"]
     }
   },
   "schemas": {},
