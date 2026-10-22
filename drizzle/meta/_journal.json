@@ -15,6 +15,13 @@
       "when": 1792495104859,
       "tag": "0001_last_venom",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792667877936,
+      "tag": "0002_common_patch",
+      "breakpoints": true
     }
   ]
 }
