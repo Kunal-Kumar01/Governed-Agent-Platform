@@ -14,6 +14,24 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/lib/auth/**", "src/lib/db/trusted.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/lib/db/trusted", "**/db/trusted"],
+              message:
+                "trusted.ts bypasses RLS. Only auth code may import it — use withTenant from @/lib/db/client instead.",
+            },
+          ],
+        },
+      ],
+    },
+  },
   eslintConfigPrettier,
 ]);
 

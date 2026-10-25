@@ -201,3 +201,9 @@ _Revised same day — see note at the end of each subsection below. The pipeline
 **Still open:** Whether `FORCE ROW LEVEL SECURITY` is applied depends on whether Neon's owner role has the bypass permission — recorded once checked.
 
 **Owner role check (2026-10-22):** `neondb_owner` has `rolbypassrls = true` — `FORCE ROW LEVEL SECURITY` is safe to apply (Issue 6). `app_user` created via SQL with `rolbypassrls = false`; it must be created by hand (password kept out of git) before migration 0003 can run on a fresh database.
+
+### Admin signup
+
+**Decided:** Admin signup is a single form that creates the organisation and its admin user together, in one transaction (`createOrganisationWithAdmin` in `trusted.ts`) — org first, since the admin's `organisation_id` only exists once the org is inserted. If either insert fails, both are rolled back, so an organisation with no admin can never exist.
+**Known limitation (v1):** An existing end-user account cannot be turned into an admin. Someone who first signed up as an end user (e.g. to chat with another company's Restricted agent) must use a different email to create an organisation — the `email UNIQUE` constraint rejects a second account with the same address.
+**Considered and deferred:** `createOrganisationForExistingUser(userId, orgName)` — insert the org and update the logged-in user to `role = admin`, `organisation_id = <new org>` only if their `organisation_id` is currently NULL (preserving one organisation per person). Deferred to keep v1's signup paths to two; revisit if users hit the limitation.
